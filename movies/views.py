@@ -33,8 +33,8 @@ class MovieListView(generics.ListCreateAPIView):
 
             serializer = self.get_serializer(data=request.data)
             if serializer.is_valid():
-                serializer.save()
-                return Response(status=status.HTTP_201_CREATED)
+                movie = serializer.save()
+                return Response(get_movie_data(movie), status=status.HTTP_201_CREATED)
             else:
                 return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
         except ObjectDoesNotExist:
@@ -87,28 +87,28 @@ class MovieDetailView(generics.RetrieveUpdateDestroyAPIView):
     queryset = Movie.objects.all()
     serializer_class = serializers.MovieSerializer
 
-    # def get_queryset(self):
-    #     queryset = Movie.objects.all()
-    #     movie_id = self.kwargs.get("pk")
-
-    #     if movie_id is not None:
-    #         queryset = queryset.filter(id=movie_id)
-    #     return queryset
-
     def get(self, request, *args, **kwargs):
         instance = self.get_object()
         data = get_movie_data(instance)
         return Response(data)
 
     def put(self, request, *args, **kwargs):
-        return self.update(request, *args, **kwargs)
+        instance = self.get_object()
+        data = request.data
+        data = revert_movie(request.data)
+        serializer = self.get_serializer(instance, data=data)
+        serializer.is_valid(raise_exception=True)
+        movie = serializer.save()
+        return Response(get_movie_data(movie))
 
     def update(self, request, *args, **kwargs):
         instance = self.get_object()
-        serializer = self.get_serializer(instance, data=request.data)
+        data = request.data
+        data = revert_movie(request.data)
+        serializer = self.get_serializer(instance, data=data, partial=True)
         serializer.is_valid(raise_exception=True)
-        serializer.save()
-        return Response(serializer.data)
+        movie = serializer.save()
+        return Response(get_movie_data(movie))
 
 
 def get_movie_data(movie):
@@ -132,3 +132,15 @@ def get_movie_data(movie):
         "cast": [{"id": actor.id, "name": actor.name} for actor in movie.cast.all()],
         "poster": movie.poster,
     }
+
+
+def revert_movie(data):
+    if 'directors' in data and not isinstance(data['directors'][0], list):
+        data['directors'] = [director['id'] for director in data['directors']]
+    if 'rating' in data and not isinstance(data['rating'], int):
+        data['rating'] = data['rating']['id']
+    if 'cast' in data and not isinstance(data['cast'][0], list):
+        data['cast'] = [actor['id'] for actor in data['cast']]
+    if 'genres' in data and not isinstance(data['genres'][0], list):
+        data['genres'] = [genre['id'] for genre in data['genres']]
+    return data

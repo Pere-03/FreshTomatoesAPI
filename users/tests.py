@@ -178,3 +178,13 @@ class TestUserView(TestCase):
         self.client.delete(self.logout_url)
         response = self.client.get(self.user_view_url)
         self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+
+    def test_user_view_bad_delete(self):
+        response = self.client.delete(self.user_view_url)
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+
+    def test_user_view_delete(self):
+        self.client.post(self.login_url, self.user_data, format="json")
+        response = self.client.delete(self.user_view_url)
+        self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
+        self.assertFalse(TomatoeUser.objects.filter(username=self.user.username).exists())
