@@ -110,7 +110,7 @@ class TestLoginView(TestCase):
             email="testuser@test.com",
             password="Testpassword1",
         )
-        self.user_data = {"email": "testuser@test.com", "password": "Testpassword1"}
+        self.user_data = {"username": "testuser@test.com", "password": "Testpassword1"}
 
     def test_login_user(self):
         response = self.client.post(self.login_url, self.user_data, format="json")
@@ -135,7 +135,7 @@ class TestLogoutView(TestCase):
             email="testuser@test.com",
             password="Testpassword1",
         )
-        self.user_data = {"email": "testuser@test.com", "password": "Testpassword1"}
+        self.user_data = {"username": "testuser@test.com", "password": "Testpassword1"}
 
     def test_logout_user(self):
         response = self.client.post(self.login_url, self.user_data, format="json")
@@ -161,7 +161,7 @@ class TestUserView(TestCase):
             email="testuser@test.com",
             password="Testpassword1",
         )
-        self.user_data = {"email": "testuser@test.com", "password": "Testpassword1"}
+        self.user_data = {"username": "testuser@test.com", "password": "Testpassword1"}
 
     def test_user_view_without_login(self):
         response = self.client.get(self.user_view_url)
@@ -171,7 +171,7 @@ class TestUserView(TestCase):
         self.client.post(self.login_url, self.user_data, format="json")
         response = self.client.get(self.user_view_url)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(response.data["email"], self.user_data["email"])
+        self.assertEqual(response.data["email"], self.user.email)
 
     def test_user_view_after_logout(self):
         self.client.post(self.login_url, self.user_data, format="json")

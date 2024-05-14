@@ -51,7 +51,7 @@ class LoginSerializer(serializers.Serializer):
             raise exceptions.ValidationError("Password is required.")
 
         user = authenticate(username=username, password=password)
-        print(username, password)
+
         if user is None:
             raise exceptions.ValidationError("User not found, check credentials.")
 

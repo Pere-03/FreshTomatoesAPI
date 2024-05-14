@@ -97,7 +97,7 @@ class TestMovieUserCreateView(TestCase):
         )
         self.client.post(
             self.login_url,
-            {"email": "testuser@test.com", "password": "Testpassword1"},
+            {"username": "testuser@test.com", "password": "Testpassword1"},
             format="json",
         )
         response = self.client.post(self.movie_list_url, self.movie_data, format="json")
@@ -109,7 +109,7 @@ class TestMovieUserCreateView(TestCase):
         )
         self.client.post(
             self.login_url,
-            {"email": "testuser@test.com", "password": "Testpassword1"},
+            {"username": "testuser@test.com", "password": "Testpassword1"},
             format="json",
         )
         response = self.client.post(self.movie_list_url, self.movie_data, format="json")
@@ -129,7 +129,7 @@ class TestMovieCreateView(TestCase):
         )
         self.client.post(
             self.login_url,
-            {"email": "testuser@test.com", "password": "Testpassword1"},
+            {"username": "testuser@test.com", "password": "Testpassword1"},
             format="json",
         )
 
@@ -187,7 +187,7 @@ class TestMovieFiltering(TestCase):
         )
         self.client.post(
             self.login_url,
-            {"email": "testuser@test.com", "password": "Testpassword1"},
+            {"username": "testuser@test.com", "password": "Testpassword1"},
             format="json",
         )
         self.genre = Genre.objects.create(name="Action")
@@ -306,7 +306,7 @@ class TestMovieUpdateView(TestCase):
         )
         self.client.post(
             self.login_url,
-            {"email": "testuser@test.com", "password": "Testpassword1"},
+            {"username": "testuser@test.com", "password": "Testpassword1"},
             format="json",
         )
         self.genre = Genre.objects.create(name="Action")

@@ -90,7 +90,7 @@ class TestReviewCreateView(TestCase):
     def test_review_create_with_login(self):
         self.client.post(
             self.login_url,
-            {"email": "testuser@test.com", "password": "Testpassword1"},
+            {"username": "testuser@test.com", "password": "Testpassword1"},
             format="json",
         )
         response = self.client.post(
