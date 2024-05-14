@@ -23,12 +23,12 @@ class UserSerializer(serializers.ModelSerializer):
             return value
 
     def create(self, validated_data):
-        if models.TomatoeUser.objects.filter(email=validated_data.get('email')).exists():
-            raise IntegrityError('Email already registered for another user')
+        if models.TomatoeUser.objects.filter(
+            email=validated_data.get("email")
+        ).exists():
+            raise IntegrityError("Email already registered for another user")
 
-        return models.TomatoeUser.objects.create_user(
-            **validated_data
-        )
+        return models.TomatoeUser.objects.create_user(**validated_data)
 
     def update(self, instance, validated_data):
         if validated_data.get("password"):

@@ -17,31 +17,15 @@ class MovieListView(generics.ListCreateAPIView):
     ordering = ["id"]
 
     def post(self, request):
-        try:
-            user = Token.objects.get(key=self.request.COOKIES.get("session")).user
-
-            if user is None:
-                return Response(
-                    {"detail": "User must be logged in to make a review."},
-                    status=status.HTTP_401_UNAUTHORIZED,
-                )
-            elif not user.is_staff:
-                return Response(
-                    {"detail": "Higher role needed to add a movie"},
-                    status=status.HTTP_403_FORBIDDEN,
-                )
-
-            serializer = self.get_serializer(data=request.data)
-            if serializer.is_valid():
-                movie = serializer.save()
-                return Response(get_movie_data(movie), status=status.HTTP_201_CREATED)
-            else:
-                return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-        except ObjectDoesNotExist:
-            return Response(
-                {"detail": "User must be logged in to make a review."},
-                status=status.HTTP_401_UNAUTHORIZED,
-            )
+        user = get_user(self.request)
+        if isinstance(user, Response):
+            return user
+        serializer = self.get_serializer(data=request.data)
+        if serializer.is_valid():
+            movie = serializer.save()
+            return Response(get_movie_data(movie), status=status.HTTP_201_CREATED)
+        else:
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
     def list(self, request, *args, **kwargs):
         queryset = self.filter_queryset(self.get_queryset())
@@ -93,8 +77,10 @@ class MovieDetailView(generics.RetrieveUpdateDestroyAPIView):
         return Response(data)
 
     def put(self, request, *args, **kwargs):
+        user = get_user(self.request)
+        if isinstance(user, Response):
+            return user
         instance = self.get_object()
-        data = request.data
         data = revert_movie(request.data)
         serializer = self.get_serializer(instance, data=data)
         serializer.is_valid(raise_exception=True)
@@ -102,13 +88,44 @@ class MovieDetailView(generics.RetrieveUpdateDestroyAPIView):
         return Response(get_movie_data(movie))
 
     def update(self, request, *args, **kwargs):
+        user = get_user(self.request)
+        if isinstance(user, Response):
+            return user
         instance = self.get_object()
-        data = request.data
         data = revert_movie(request.data)
         serializer = self.get_serializer(instance, data=data, partial=True)
         serializer.is_valid(raise_exception=True)
         movie = serializer.save()
         return Response(get_movie_data(movie))
+
+    def delete(self, request, *args, **kwargs):
+        user = get_user(self.request)
+        if isinstance(user, Response):
+            return user
+        return super().delete(request, *args, **kwargs)
+
+
+def get_user(request):
+    try:
+        user = Token.objects.get(key=request.COOKIES.get("session")).user
+
+        if user is None:
+            return Response(
+                {"detail": "User must be logged in to manage movies."},
+                status=status.HTTP_401_UNAUTHORIZED,
+            )
+        elif not user.is_staff:
+            return Response(
+                {"detail": "Higher role needed to manage movies"},
+                status=status.HTTP_403_FORBIDDEN,
+            )
+        return user
+
+    except ObjectDoesNotExist:
+        return Response(
+            {"detail": "User must be logged in to manage movies."},
+            status=status.HTTP_401_UNAUTHORIZED,
+        )
 
 
 def get_movie_data(movie):
@@ -135,12 +152,12 @@ def get_movie_data(movie):
 
 
 def revert_movie(data):
-    if 'directors' in data and not isinstance(data['directors'][0], int):
-        data['directors'] = [director['id'] for director in data['directors']]
-    if 'rating' in data and not isinstance(data['rating'], int):
-        data['rating'] = data['rating']['id']
-    if 'cast' in data and not isinstance(data['cast'][0], int):
-        data['cast'] = [actor['id'] for actor in data['cast']]
-    if 'genres' in data and not isinstance(data['genres'][0], int):
-        data['genres'] = [genre['id'] for genre in data['genres']]
+    if "directors" in data and not isinstance(data["directors"][0], int):
+        data["directors"] = [director["id"] for director in data["directors"]]
+    if "rating" in data and not isinstance(data["rating"], int):
+        data["rating"] = data["rating"]["id"]
+    if "cast" in data and not isinstance(data["cast"][0], int):
+        data["cast"] = [actor["id"] for actor in data["cast"]]
+    if "genres" in data and not isinstance(data["genres"][0], int):
+        data["genres"] = [genre["id"] for genre in data["genres"]]
     return data

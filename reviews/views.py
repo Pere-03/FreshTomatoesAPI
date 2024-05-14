@@ -3,7 +3,6 @@ from rest_framework.response import Response
 from rest_framework.authtoken.models import Token
 
 from django.core.exceptions import ObjectDoesNotExist
-from rest_framework.exceptions import NotAuthenticated
 
 from .models import Review
 from users.models import TomatoeUser
@@ -19,42 +18,39 @@ class ReviewListView(generics.ListCreateAPIView):
     ordering = ["id"]
 
     def post(self, request):
-        try:
-            user = Token.objects.get(key=self.request.COOKIES.get("session")).user
-            if user is None:
-                raise NotAuthenticated("User must be logged in to make a review.")
-            serializer = self.get_serializer(data=request.data)
-            if serializer.is_valid():
-                movie = serializer.validated_data.get("movie")
-                review = Review.objects.filter(user=user, movie=movie).first()
-                overwrite = request.data.get("overwrite", False)
+        user = get_user(self.request)
+        if isinstance(user, Response):
+            return user
+        serializer = self.get_serializer(data=request.data)
+        if serializer.is_valid():
+            movie = serializer.validated_data.get("movie")
+            review = Review.objects.filter(user=user, movie=movie).first()
+            overwrite = request.data.get("overwrite", False)
 
-                if review is not None:
-                    if overwrite:
-                        for attr, value in serializer.validated_data.items():
-                            setattr(review, attr, value)
-                        review.save()
-                        self.update_rating(movie, review)
-                        return Response(
-                            get_review_data(review).data,
-                            status=status.HTTP_201_CREATED,
-                        )
-                    else:
-                        return Response(
-                            ReviewSerializer(review).data,
-                            status=status.HTTP_409_CONFLICT,
-                        )
-                else:
-                    review = serializer.save(user=user)
+            if review is not None:
+                if overwrite:
+                    for attr, value in serializer.validated_data.items():
+                        setattr(review, attr, value)
+                    review.save()
                     self.update_rating(movie, review)
                     return Response(
-                        get_review_data(review),
+                        get_review_data(review).data,
                         status=status.HTTP_201_CREATED,
                     )
+                else:
+                    return Response(
+                        ReviewSerializer(review).data,
+                        status=status.HTTP_409_CONFLICT,
+                    )
             else:
-                return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-        except ObjectDoesNotExist:
-            return Response(status=status.HTTP_401_UNAUTHORIZED)
+                review = serializer.save(user=user)
+                self.update_rating(movie, review)
+                return Response(
+                    get_review_data(review),
+                    status=status.HTTP_201_CREATED,
+                )
+        else:
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
     def filter_queryset(self, queryset):
         query_params = self.request.query_params
@@ -100,19 +96,101 @@ class ReviewDetailView(generics.RetrieveUpdateDestroyAPIView):
     serializer_class = ReviewSerializer
 
     def get(self, request, *args, **kwargs):
+        user = get_user(self.request)
+        if isinstance(user, Response):
+            return user
         instance = self.get_object()
         data = get_review_data(instance)
         return Response(data)
 
     def put(self, request, *args, **kwargs):
-        return self.update(request, *args, **kwargs)
+        user = get_user(self.request)
+        if isinstance(user, Response):
+            return user
+        instance = self.get_object()
+        if user.id != instance.user.id:
+            return Response(
+                {"detail": "Can only edit your own reviews."},
+                status=status.HTTP_401_UNAUTHORIZED,
+            )
+        data = check_update(request.data, instance)
+        if isinstance(data, Response):
+            return data
+        serializer = self.get_serializer(instance, data=data)
+        serializer.is_valid(raise_exception=True)
+        review = serializer.save()
+        return Response(get_review_data(review))
 
     def update(self, request, *args, **kwargs):
+        user = get_user(self.request)
+        if isinstance(user, Response):
+            return user
+
         instance = self.get_object()
-        serializer = self.get_serializer(instance, data=request.data)
+        if user.id != instance.user.id:
+            return Response(
+                {"detail": "Can only edit your own reviews."},
+                status=status.HTTP_401_UNAUTHORIZED,
+            )
+        data = check_update(request.data, instance)
+        if isinstance(data, Response):
+            return data
+        serializer = self.get_serializer(instance, data=data)
         serializer.is_valid(raise_exception=True)
-        serializer.save()
-        return Response(serializer.data)
+        review = serializer.save()
+        return Response(get_review_data(review))
+
+    def delete(self, request, *args, **kwargs):
+        user = get_user(self.request)
+        if isinstance(user, Response):
+            return user
+        instance = self.get_object()
+        if user.id != instance.user.id:
+            return Response(
+                {"detail": "User can only delete your own reviews."},
+                status=status.HTTP_403_FORBIDDEN,
+            )
+        return super().delete(request, *args, **kwargs)
+
+
+def check_update(data, instance):
+    if "user" in data:
+        if not isinstance(data["user"], int):
+            data["user"] = data["user"]["id"]
+        if data["user"] != instance.user.id:
+            return Response(
+                {"detail": "User can only delete your own reviews."},
+                status=status.HTTP_403_FORBIDDEN,
+            )
+    if "movie" in data:
+        if not isinstance(data["movie"], int):
+            data["movie"] = data["movie"]["id"]
+        if data["movie"] != instance.movie.id:
+            return Response(
+                {"detail": "Cannot change Review's movie."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+    else:
+        data["movie"] = instance.movie.id
+    return data
+
+
+def get_user(request):
+    try:
+        user = Token.objects.get(key=request.COOKIES.get("session")).user
+
+        if user is None:
+            return Response(
+                {"detail": "User must be logged in to manage reviews."},
+                status=status.HTTP_401_UNAUTHORIZED,
+            )
+        return user
+
+    except ObjectDoesNotExist:
+        return Response(
+            {"detail": "User must be logged in to manage reviews."},
+            status=status.HTTP_401_UNAUTHORIZED,
+        )
 
 
 def get_review_data(review):

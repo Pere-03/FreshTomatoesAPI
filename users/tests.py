@@ -28,7 +28,7 @@ class TestUserSerializer(TestCase):
             "name": "Test User",
             "tel": "123456789",
             "email": "testuser@test.com",
-            "password": "Testpassword1"
+            "password": "Testpassword1",
         }
         self.inputs = ["Hol12ascs", "vadsvadsad", "Hol12"]
         self.expects_error = [False, True, True]
@@ -94,7 +94,7 @@ class TestRegisterView(TestCase):
         response = self.client.post(self.register_url, self.user_data, format="json")
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         # If email already exists
-        self.user_data['username'] = 'NotDuplicated'
+        self.user_data["username"] = "NotDuplicated"
         response = self.client.post(self.register_url, self.user_data, format="json")
         self.assertEqual(response.status_code, status.HTTP_409_CONFLICT)
 
@@ -187,4 +187,6 @@ class TestUserView(TestCase):
         self.client.post(self.login_url, self.user_data, format="json")
         response = self.client.delete(self.user_view_url)
         self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
-        self.assertFalse(TomatoeUser.objects.filter(username=self.user.username).exists())
+        self.assertFalse(
+            TomatoeUser.objects.filter(username=self.user.username).exists()
+        )

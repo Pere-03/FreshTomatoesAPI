@@ -301,14 +301,6 @@ class TestMovieUpdateView(TestCase):
     def setUp(self):
         self.client = APIClient()
         self.login_url = reverse("login")
-        self.user = TomatoeUser.objects.create_user(
-            username="testuser@test.com", password="Testpassword1", is_staff=True
-        )
-        self.client.post(
-            self.login_url,
-            {"username": "testuser@test.com", "password": "Testpassword1"},
-            format="json",
-        )
         self.genre = Genre.objects.create(name="Action")
         self.celebrity = Celebrity.objects.create(name="Test Celebrity")
         self.rating = Rating.objects.create(name="PG-13")
@@ -324,9 +316,7 @@ class TestMovieUpdateView(TestCase):
         self.movie.directors.add(self.celebrity)
         self.movie.cast.add(self.celebrity)
         self.movie_detail_url = reverse("movie_detail", kwargs={"pk": self.movie.id})
-
-    def test_movie_update_with_staff_user(self):
-        movie_data = {
+        self.movie_data = {
             "title": "Updated Movie",
             "year": 2021,
             "rating": self.rating.id,
@@ -337,6 +327,99 @@ class TestMovieUpdateView(TestCase):
             "directors": [self.celebrity.id],
             "cast": [self.celebrity.id],
         }
-        response = self.client.put(self.movie_detail_url, movie_data, format="json")
+
+    def test_movie_update_without_login(self):
+        response = self.client.put(
+            self.movie_detail_url, self.movie_data, format="json"
+        )
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+
+    def test_movie_update_with_non_staff_user(self):
+        self.user = TomatoeUser.objects.create_user(
+            username="testuser@test.com", password="Testpassword1", is_staff=False
+        )
+        self.client.post(
+            self.login_url,
+            {"username": "testuser@test.com", "password": "Testpassword1"},
+            format="json",
+        )
+        response = self.client.put(
+            self.movie_detail_url, self.movie_data, format="json"
+        )
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+
+    def test_movie_update_with_staff_user(self):
+        self.user = TomatoeUser.objects.create_user(
+            username="testuser@test.com", password="Testpassword1", is_staff=True
+        )
+        self.client.post(
+            self.login_url,
+            {"username": "testuser@test.com", "password": "Testpassword1"},
+            format="json",
+        )
+        response = self.client.put(
+            self.movie_detail_url, self.movie_data, format="json"
+        )
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(response.data["title"], "Updated Movie")
+
+    def test_movie_delete_without_login(self):
+        response = self.client.delete(self.movie_detail_url)
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+
+    def test_movie_delete_with_non_staff_user(self):
+        self.user = TomatoeUser.objects.create_user(
+            username="testuser@test.com", password="Testpassword1", is_staff=False
+        )
+        self.client.post(
+            self.login_url,
+            {"username": "testuser@test.com", "password": "Testpassword1"},
+            format="json",
+        )
+        response = self.client.delete(self.movie_detail_url)
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+
+    def test_movie_delete_with_staff_user(self):
+        self.user = TomatoeUser.objects.create_user(
+            username="testuser@test.com", password="Testpassword1", is_staff=True
+        )
+        self.client.post(
+            self.login_url,
+            {"username": "testuser@test.com", "password": "Testpassword1"},
+            format="json",
+        )
+        response = self.client.delete(self.movie_detail_url)
+        self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
+
+    def test_movie_partial_update_without_login(self):
+        response = self.client.patch(
+            self.movie_detail_url, self.movie_data, format="json"
+        )
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+
+    def test_movie_partial_update_with_non_staff_user(self):
+        self.user = TomatoeUser.objects.create_user(
+            username="testuser@test.com", password="Testpassword1", is_staff=False
+        )
+        self.client.post(
+            self.login_url,
+            {"username": "testuser@test.com", "password": "Testpassword1"},
+            format="json",
+        )
+        response = self.client.patch(
+            self.movie_detail_url, self.movie_data, format="json"
+        )
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+
+    def test_movie_partial_update_with_staff_user(self):
+        self.user = TomatoeUser.objects.create_user(
+            username="testuser@test.com", password="Testpassword1", is_staff=True
+        )
+        self.client.post(
+            self.login_url,
+            {"username": "testuser@test.com", "password": "Testpassword1"},
+            format="json",
+        )
+        response = self.client.patch(
+            self.movie_detail_url, self.movie_data, format="json"
+        )
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
