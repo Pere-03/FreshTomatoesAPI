@@ -7,7 +7,7 @@ from users import models
 class UserSerializer(serializers.ModelSerializer):
     class Meta:
         model = models.TomatoeUser
-        fields = ["id", "name", "tel", "email", "password"]
+        fields = ["id", "name", "username", "tel", "email", "password"]
         extra_kwargs = {"password": {"write_only": True}}
         read_only_fields = ["id"]
 

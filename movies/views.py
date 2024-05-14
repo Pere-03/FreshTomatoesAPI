@@ -4,16 +4,17 @@ from rest_framework.authtoken.models import Token
 
 from rest_framework.exceptions import ValidationError
 from django.core.exceptions import ObjectDoesNotExist
-from django.shortcuts import get_object_or_404
 
 from .models import Movie
 from . import serializers
 
 
 class MovieListView(generics.ListCreateAPIView):
+    queryset = Movie.objects.all()
     serializer_class = serializers.MovieSerializer
     filter_backends = [filters.OrderingFilter]
-    ordering_fields = ["year", "userRating", "runtime"]
+    ordering_fields = ["year", "userRating", "runtime", "votes"]
+    ordering = ["id"]
 
     def post(self, request):
         try:
@@ -43,20 +44,13 @@ class MovieListView(generics.ListCreateAPIView):
             )
 
     def list(self, request, *args, **kwargs):
-        queryset = self.get_queryset()
+        queryset = self.filter_queryset(self.get_queryset())
         page = self.paginate_queryset(queryset)
         if page is not None:
             data = [get_movie_data(movie) for movie in page]
             return self.get_paginated_response(data)
         data = [get_movie_data(movie) for movie in queryset]
         return Response(data)
-
-    def get_queryset(self):
-        queryset = Movie.objects.all().order_by("id")
-        movie_id = self.kwargs.get("movie_pk")
-        if movie_id is not None:
-            queryset = queryset.filter(id=movie_id)
-        return self.filter_queryset(queryset)
 
     def filter_queryset(self, queryset):
         query_params = self.request.query_params
@@ -90,36 +84,16 @@ class MovieListView(generics.ListCreateAPIView):
 
 
 class MovieDetailView(generics.RetrieveUpdateDestroyAPIView):
+    queryset = Movie.objects.all()
     serializer_class = serializers.MovieSerializer
-    lookup_field = "movie_pk"
 
-    def get_queryset(self):
-        queryset = Movie.objects.all()
-        movie_id = self.kwargs.get("movie_pk")
+    # def get_queryset(self):
+    #     queryset = Movie.objects.all()
+    #     movie_id = self.kwargs.get("pk")
 
-        if movie_id is not None:
-            queryset = queryset.filter(id=movie_id)
-        return queryset
-
-    def get_object(self):
-        queryset = self.filter_queryset(self.get_queryset())
-
-        # Perform the lookup filtering.
-        lookup_url_kwarg = self.lookup_url_kwarg or self.lookup_field
-
-        assert lookup_url_kwarg in self.kwargs, (
-            "Expected view %s to be called with a URL keyword argument "
-            'named "%s". Fix your URL conf, or set the `.lookup_field` '
-            "attribute on the view correctly."
-            % (self.__class__.__name__, lookup_url_kwarg)
-        )
-
-        filter_kwargs = {"pk": self.kwargs[lookup_url_kwarg]}
-        obj = get_object_or_404(queryset, **filter_kwargs)
-
-        self.check_object_permissions(self.request, obj)
-
-        return obj
+    #     if movie_id is not None:
+    #         queryset = queryset.filter(id=movie_id)
+    #     return queryset
 
     def get(self, request, *args, **kwargs):
         instance = self.get_object()

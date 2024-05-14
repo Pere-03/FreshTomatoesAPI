@@ -59,9 +59,7 @@ class TestMovieDetailView(TestCase):
         self.movie.genres.add(self.genre)
         self.movie.directors.add(self.celebrity)
         self.movie.cast.add(self.celebrity)
-        self.movie_detail_url = reverse(
-            "movie_detail", kwargs={"movie_pk": self.movie.id}
-        )
+        self.movie_detail_url = reverse("movie_detail", kwargs={"pk": self.movie.id})
 
     def test_movie_detail(self):
         response = self.client.get(self.movie_detail_url)
@@ -240,6 +238,64 @@ class TestMovieFiltering(TestCase):
         self.assertEqual(len(data), 1)
         self.assertEqual(data[0]["rating"]["rating"], "PG-13")
 
+    def test_movie_ordering(self):
+        self.movie2 = Movie.objects.create(
+            title="Test Movie 2",
+            year=2021,
+            rating=self.rating,
+            runtime=130,
+            userRating=8.0,
+            votes=2000,
+        )
+        self.movie3 = Movie.objects.create(
+            title="Test Movie 3",
+            year=2019,
+            rating=self.rating,
+            runtime=110,
+            userRating=6.5,
+            votes=1500,
+        )
+
+        response = self.client.get(
+            self.movie_list_url, {"ordering": "year"}, format="json"
+        )
+        data = response.data["results"]
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(len(data), 3)
+        self.assertEqual(data[0]["year"], self.movie3.year)
+        self.assertEqual(data[1]["year"], self.movie.year)
+        self.assertEqual(data[2]["year"], self.movie2.year)
+
+        response = self.client.get(
+            self.movie_list_url, {"ordering": "-userRating"}, format="json"
+        )
+        data = response.data["results"]
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(len(data), 3)
+        self.assertEqual(data[0]["userRating"], self.movie2.userRating)
+        self.assertEqual(data[1]["userRating"], self.movie.userRating)
+        self.assertEqual(data[2]["userRating"], self.movie3.userRating)
+
+        response = self.client.get(
+            self.movie_list_url, {"ordering": "runtime"}, format="json"
+        )
+        data = response.data["results"]
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(len(data), 3)
+        self.assertEqual(data[0]["runtime"], self.movie3.runtime)
+        self.assertEqual(data[1]["runtime"], self.movie.runtime)
+        self.assertEqual(data[2]["runtime"], self.movie2.runtime)
+
+        response = self.client.get(
+            self.movie_list_url, {"ordering": "-votes"}, format="json"
+        )
+        data = response.data["results"]
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(len(data), 3)
+        self.assertEqual(data[0]["votes"], self.movie2.votes)
+        self.assertEqual(data[1]["votes"], self.movie3.votes)
+        self.assertEqual(data[2]["votes"], self.movie.votes)
+
 
 class TestMovieUpdateView(TestCase):
     def setUp(self):
@@ -267,9 +323,7 @@ class TestMovieUpdateView(TestCase):
         self.movie.genres.add(self.genre)
         self.movie.directors.add(self.celebrity)
         self.movie.cast.add(self.celebrity)
-        self.movie_detail_url = reverse(
-            "movie_detail", kwargs={"movie_pk": self.movie.id}
-        )
+        self.movie_detail_url = reverse("movie_detail", kwargs={"pk": self.movie.id})
 
     def test_movie_update_with_staff_user(self):
         movie_data = {

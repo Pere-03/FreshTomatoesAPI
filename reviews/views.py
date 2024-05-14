@@ -12,9 +12,11 @@ from .serializers import ReviewSerializer
 
 
 class ReviewListView(generics.ListCreateAPIView):
+    queryset = Review.objects.all()
     serializer_class = ReviewSerializer
     filter_backends = [filters.OrderingFilter]
     ordering_fields = ["userRating"]
+    ordering = ["id"]
 
     def post(self, request):
         try:
@@ -34,7 +36,7 @@ class ReviewListView(generics.ListCreateAPIView):
                         review.save()
                         self.update_rating(movie, review)
                         return Response(
-                            ReviewSerializer(review).data,
+                            get_review_data(review).data,
                             status=status.HTTP_201_CREATED,
                         )
                     else:
@@ -46,7 +48,7 @@ class ReviewListView(generics.ListCreateAPIView):
                     review = serializer.save(user=user)
                     self.update_rating(movie, review)
                     return Response(
-                        self.get_review_data(review),
+                        get_review_data(review),
                         status=status.HTTP_201_CREATED,
                     )
             else:
@@ -54,44 +56,31 @@ class ReviewListView(generics.ListCreateAPIView):
         except ObjectDoesNotExist:
             return Response(status=status.HTTP_401_UNAUTHORIZED)
 
-    def get_queryset(self):
-        queryset = Review.objects.all().order_by('id')
+    def filter_queryset(self, queryset):
         query_params = self.request.query_params
 
-        if 'movie_id' in query_params:
-            queryset = queryset.filter(movie__id=query_params['movie_id'])
-        elif 'title' in query_params:
+        if "movie_id" in query_params:
+            queryset = queryset.filter(movie__id=query_params["movie_id"])
+        elif "title" in query_params:
             queryset = queryset.filter(movie__title__icontains=query_params["title"])
 
-        if 'user_id' in query_params:
-            queryset = queryset.filter(user__id=query_params['user_id'])
+        if "user_id" in query_params:
+            queryset = queryset.filter(user__id=query_params["user_id"])
+        elif "username" in query_params:
+            queryset = queryset.filter(
+                user__username__icontains=query_params["username"]
+            )
 
-        return queryset
+        return super().filter_queryset(queryset)
 
     def list(self, request, *args, **kwargs):
-        queryset = self.get_queryset()
+        queryset = self.filter_queryset(self.get_queryset())
         page = self.paginate_queryset(queryset)
         if page is not None:
-            data = [self.get_review_data(review) for review in page]
+            data = [get_review_data(review) for review in page]
             return self.get_paginated_response(data)
-        data = [self.get_review_data(review) for review in queryset]
+        data = [get_review_data(review) for review in queryset]
         return Response(data)
-
-    def get_review_data(self, review):
-        if isinstance(review.movie, Movie):
-            movie = review.movie
-        else:
-            movie = Movie.objects.get(id=review.movie)
-        if isinstance(review.user, TomatoeUser):
-            user = review.user
-        else:
-            user = TomatoeUser.objects.get(id=review.user)
-        return {
-            "id": review.id,
-            "movie": {"id": movie.id, "title": movie.title},
-            "user": {"id": user.id, "username": user.username},
-            "comment": review.comment,
-        }
 
     def update_rating(self, movie, review):
         """
@@ -109,3 +98,36 @@ class ReviewListView(generics.ListCreateAPIView):
 class ReviewDetailView(generics.RetrieveUpdateDestroyAPIView):
     queryset = Review.objects.all()
     serializer_class = ReviewSerializer
+
+    def get(self, request, *args, **kwargs):
+        instance = self.get_object()
+        data = get_review_data(instance)
+        return Response(data)
+
+    def put(self, request, *args, **kwargs):
+        return self.update(request, *args, **kwargs)
+
+    def update(self, request, *args, **kwargs):
+        instance = self.get_object()
+        serializer = self.get_serializer(instance, data=request.data)
+        serializer.is_valid(raise_exception=True)
+        serializer.save()
+        return Response(serializer.data)
+
+
+def get_review_data(review):
+    if isinstance(review.movie, Movie):
+        movie = review.movie
+    else:
+        movie = Movie.objects.get(id=review.movie)
+    if isinstance(review.user, TomatoeUser):
+        user = review.user
+    else:
+        user = TomatoeUser.objects.get(id=review.user)
+    return {
+        "id": review.id,
+        "movie": {"id": movie.id, "title": movie.title},
+        "user": {"id": user.id, "username": user.username},
+        "userRating": review.userRating,
+        "comment": review.comment,
+    }

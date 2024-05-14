@@ -97,3 +97,96 @@ class TestReviewCreateView(TestCase):
             self.review_list_url, self.review_data, format="json"
         )
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+
+
+class TestReviewFiltering(TestCase):
+    def setUp(self):
+        self.client = APIClient()
+        self.login_url = reverse("login")
+        self.review_list_url = reverse("review_list")
+        self.user1 = TomatoeUser.objects.create_user(
+            username="testuser1@test.com",
+            name="Test User 1",
+            tel="123456789",
+            email="testuser1@test.com",
+            password="Testpassword1",
+        )
+        self.user2 = TomatoeUser.objects.create_user(
+            username="testuser2@test.com",
+            name="Test User 2",
+            tel="123456789",
+            email="testuser2@test.com",
+            password="Testpassword1",
+        )
+        self.genre = Genre.objects.create(name="Action")
+        self.celebrity = Celebrity.objects.create(name="Test Celebrity")
+        self.rating = Rating.objects.create(name="PG-13")
+        self.movie1 = Movie.objects.create(
+            title="Test Movie 1",
+            year=2020,
+            rating=self.rating,
+            runtime=120,
+            userRating=7.5,
+            votes=1000,
+        )
+        self.movie2 = Movie.objects.create(
+            title="Test Movie 2",
+            year=2021,
+            rating=self.rating,
+            runtime=130,
+            userRating=8.0,
+            votes=2000,
+        )
+        self.review1 = Review.objects.create(
+            user=self.user1, movie=self.movie1, userRating=8.0, comment="Great movie!"
+        )
+        self.review2 = Review.objects.create(
+            user=self.user2, movie=self.movie2, userRating=9.0, comment="Awesome movie!"
+        )
+
+    def test_review_filtering_by_user(self):
+        response = self.client.get(
+            self.review_list_url, {"user_id": self.user1.id}, format="json"
+        )
+        data = response.data["results"]
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(len(data), 1)
+        self.assertEqual(data[0]["user"]["id"], self.user1.id)
+
+    def test_review_filtering_by_movie(self):
+        response = self.client.get(
+            self.review_list_url, {"movie_id": self.movie1.id}, format="json"
+        )
+        data = response.data["results"]
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(len(data), 1)
+        self.assertEqual(data[0]["movie"]["id"], self.movie1.id)
+
+    def test_review_filtering_by_movie_title(self):
+        response = self.client.get(
+            self.review_list_url, {"title": "Test Movie 1"}, format="json"
+        )
+        data = response.data["results"]
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(len(data), 1)
+        self.assertEqual(data[0]["movie"]["id"], self.movie1.id)
+
+    def test_review_ordering_by_userRating(self):
+        response = self.client.get(
+            self.review_list_url, {"ordering": "userRating"}, format="json"
+        )
+        data = response.data["results"]
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(len(data), 2)
+
+        self.assertEqual(data[0]["userRating"], self.review1.userRating)
+        self.assertEqual(data[1]["userRating"], self.review2.userRating)
+
+        response = self.client.get(
+            self.review_list_url, {"ordering": "-userRating"}, format="json"
+        )
+        data = response.data["results"]
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(len(data), 2)
+        self.assertEqual(data[0]["userRating"], self.review2.userRating)
+        self.assertEqual(data[1]["userRating"], self.review1.userRating)
