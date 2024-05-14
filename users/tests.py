@@ -19,7 +19,7 @@ class TestUserSerializer(SimpleTestCase):
 class TestRegisterView(TestCase):
     def test_caso_1_vista(self):
         response = self.client.post(
-            "/api/users/",
+            "/users/",
             {
                 "name": "Alvaro",
                 "tel": "9999999",
