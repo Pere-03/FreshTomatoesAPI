@@ -6,6 +6,8 @@ from django.core.exceptions import ObjectDoesNotExist
 from rest_framework.exceptions import NotAuthenticated
 
 from .models import Review
+from users.models import TomatoeUser
+from movies.models import Movie
 from .serializers import ReviewSerializer
 
 
@@ -39,10 +41,10 @@ class ReviewListView(generics.ListCreateAPIView):
                             status=status.HTTP_409_CONFLICT,
                         )
                 else:
-                    new_review = serializer.save(user=user)
-                    self.update_rating(movie, new_review)
+                    review = serializer.save(user=user)
+                    self.update_rating(movie, review)
                     return Response(
-                        self.ger_review_data(review),
+                        self.get_review_data(review),
                         status=status.HTTP_201_CREATED,
                     )
             else:
@@ -51,7 +53,7 @@ class ReviewListView(generics.ListCreateAPIView):
             return Response(status=status.HTTP_401_UNAUTHORIZED)
 
     def get_queryset(self):
-        queryset = Review.objects.all()
+        queryset = Review.objects.all().order_by("id")
         movie_id = self.kwargs.get("movie_pk")
         if "me" in self.request.path:
             try:
@@ -67,6 +69,31 @@ class ReviewListView(generics.ListCreateAPIView):
         if movie_id is not None:
             queryset = queryset.filter(movie__id=movie_id)
         return queryset
+
+    def list(self, request, *args, **kwargs):
+        queryset = self.get_queryset()
+        page = self.paginate_queryset(queryset)
+        if page is not None:
+            data = [self.get_review_data(review) for review in page]
+            return self.get_paginated_response(data)
+        data = [self.get_review_data(review) for review in queryset]
+        return Response(data)
+
+    def get_review_data(self, review):
+        if isinstance(review.movie, Movie):
+            movie = review.movie
+        else:
+            movie = Movie.objects.get(id=review.movie)
+        if isinstance(review.user, TomatoeUser):
+            user = review.user
+        else:
+            user = TomatoeUser.objects.get(id=review.user)
+        return {
+            "id": review.id,
+            "movie": {"id": movie.id, "title": movie.title},
+            "user": {"id": user.id, "username": user.username},
+            "comment": review.comment,
+        }
 
     def update_rating(self, movie, review):
         """

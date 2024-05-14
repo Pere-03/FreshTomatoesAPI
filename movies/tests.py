@@ -222,7 +222,7 @@ class TestMovieFiltering(TestCase):
         data = response.data["results"]
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(len(data), 1)
-        self.assertEqual(data[0]["genres"][0], "Action")
+        self.assertEqual(data[0]["genres"][0]["genre"], "Action")
 
         response = self.client.get(
             self.movie_list_url, {"director": "Test Celebrity"}, format="json"
@@ -230,7 +230,7 @@ class TestMovieFiltering(TestCase):
         data = response.data["results"]
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(len(data), 1)
-        self.assertEqual(data[0]["directors"][0], "Test Celebrity")
+        self.assertEqual(data[0]["directors"][0]["name"], "Test Celebrity")
 
         response = self.client.get(
             self.movie_list_url, {"rating": "PG-13"}, format="json"
@@ -238,7 +238,7 @@ class TestMovieFiltering(TestCase):
         data = response.data["results"]
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(len(data), 1)
-        self.assertEqual(data[0]["rating"], "PG-13")
+        self.assertEqual(data[0]["rating"]["rating"], "PG-13")
 
 
 class TestMovieUpdateView(TestCase):

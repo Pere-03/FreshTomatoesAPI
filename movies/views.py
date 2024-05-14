@@ -52,7 +52,7 @@ class MovieListView(generics.ListCreateAPIView):
         return Response(data)
 
     def get_queryset(self):
-        queryset = Movie.objects.all()
+        queryset = Movie.objects.all().order_by("id")
         movie_id = self.kwargs.get("movie_pk")
         if movie_id is not None:
             queryset = queryset.filter(id=movie_id)
@@ -123,7 +123,6 @@ class MovieDetailView(generics.RetrieveUpdateDestroyAPIView):
 
     def get(self, request, *args, **kwargs):
         instance = self.get_object()
-        print(instance)
         data = get_movie_data(instance)
         return Response(data)
 
@@ -144,11 +143,18 @@ def get_movie_data(movie):
         "title": movie.title,
         "year": movie.year,
         "runtime": movie.runtime if movie.runtime is not None else "--",
-        "rating": movie.rating.name if movie.rating.name is not None else "--",
-        "directors": [director.name for director in movie.directors.all()],
+        "rating": {"id": movie.rating.id, "rating": movie.rating.name}
+        if movie.rating.name is not None
+        else {"id": -1, "rating": "--"},
+        "directors": [
+            {"id": director.id, "name": director.name}
+            for director in movie.directors.all()
+        ],
         "userRating": movie.userRating,
         "votes": movie.votes,
-        "genres": [genre.name for genre in movie.genres.all()],
-        "cast": [actor.name for actor in movie.cast.all()],
+        "genres": [
+            {"id": genre.id, "genre": genre.name} for genre in movie.genres.all()
+        ],
+        "cast": [{"id": actor.id, "name": actor.name} for actor in movie.cast.all()],
         "poster": movie.poster,
     }
