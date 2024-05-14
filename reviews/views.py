@@ -1,4 +1,4 @@
-from rest_framework import generics, status
+from rest_framework import generics, status, filters
 from rest_framework.response import Response
 from rest_framework.authtoken.models import Token
 
@@ -13,6 +13,8 @@ from .serializers import ReviewSerializer
 
 class ReviewListView(generics.ListCreateAPIView):
     serializer_class = ReviewSerializer
+    filter_backends = [filters.OrderingFilter]
+    ordering_fields = ["userRating"]
 
     def post(self, request):
         try:
@@ -53,21 +55,17 @@ class ReviewListView(generics.ListCreateAPIView):
             return Response(status=status.HTTP_401_UNAUTHORIZED)
 
     def get_queryset(self):
-        queryset = Review.objects.all().order_by("id")
-        movie_id = self.kwargs.get("movie_pk")
-        if "me" in self.request.path:
-            try:
-                user = Token.objects.get(key=self.request.COOKIES.get("session")).user
-                if user is None:
-                    raise NotAuthenticated(
-                        "User must be logged in to view their reviews."
-                    )
-                queryset = queryset.filter(user=user)
-            except ObjectDoesNotExist:
-                raise NotAuthenticated("User must be logged in to view their reviews.")
+        queryset = Review.objects.all().order_by('id')
+        query_params = self.request.query_params
 
-        if movie_id is not None:
-            queryset = queryset.filter(movie__id=movie_id)
+        if 'movie_id' in query_params:
+            queryset = queryset.filter(movie__id=query_params['movie_id'])
+        elif 'title' in query_params:
+            queryset = queryset.filter(movie__title__icontains=query_params["title"])
+
+        if 'user_id' in query_params:
+            queryset = queryset.filter(user__id=query_params['user_id'])
+
         return queryset
 
     def list(self, request, *args, **kwargs):
