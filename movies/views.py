@@ -78,7 +78,9 @@ class MovieListView(generics.ListCreateAPIView):
                 )
 
             if "rating" in query_params:
-                queryset = queryset.filter(rating__name__icontains=query_params["rating"])
+                queryset = queryset.filter(
+                    rating__name__icontains=query_params["rating"]
+                )
 
         except (ValueError, TypeError):
             raise ValidationError(
@@ -89,11 +91,11 @@ class MovieListView(generics.ListCreateAPIView):
 
 class MovieDetailView(generics.RetrieveUpdateDestroyAPIView):
     serializer_class = serializers.MovieSerializer
-    lookup_field = 'movie_pk'
+    lookup_field = "movie_pk"
 
     def get_queryset(self):
         queryset = Movie.objects.all()
-        movie_id = self.kwargs.get('movie_pk')
+        movie_id = self.kwargs.get("movie_pk")
 
         if movie_id is not None:
             queryset = queryset.filter(id=movie_id)
@@ -106,10 +108,10 @@ class MovieDetailView(generics.RetrieveUpdateDestroyAPIView):
         lookup_url_kwarg = self.lookup_url_kwarg or self.lookup_field
 
         assert lookup_url_kwarg in self.kwargs, (
-            'Expected view %s to be called with a URL keyword argument '
+            "Expected view %s to be called with a URL keyword argument "
             'named "%s". Fix your URL conf, or set the `.lookup_field` '
-            'attribute on the view correctly.' %
-            (self.__class__.__name__, lookup_url_kwarg)
+            "attribute on the view correctly."
+            % (self.__class__.__name__, lookup_url_kwarg)
         )
 
         filter_kwargs = {"pk": self.kwargs[lookup_url_kwarg]}

@@ -121,17 +121,19 @@ class TestMovieUserCreateView(TestCase):
 class TestMovieCreateView(TestCase):
     def setUp(self):
         self.client = APIClient()
-        self.login_url = reverse('login')
-        self.movie_list_url = reverse('movie_list')
+        self.login_url = reverse("login")
+        self.movie_list_url = reverse("movie_list")
         self.genre = Genre.objects.create(name="Action")
         self.celebrity = Celebrity.objects.create(name="Test Celebrity")
         self.rating = Rating.objects.create(name="PG-13")
         self.user = TomatoeUser.objects.create_user(
-            username="testuser@test.com",
-            password="Testpassword1",
-            is_staff=True
+            username="testuser@test.com", password="Testpassword1", is_staff=True
         )
-        self.client.post(self.login_url, {'email': 'testuser@test.com', 'password': 'Testpassword1'}, format='json')
+        self.client.post(
+            self.login_url,
+            {"email": "testuser@test.com", "password": "Testpassword1"},
+            format="json",
+        )
 
     def test_movie_create_without_title(self):
         movie_data = {
@@ -142,9 +144,9 @@ class TestMovieCreateView(TestCase):
             "votes": 1000,
             "genres": [self.genre.id],
             "directors": [self.celebrity.id],
-            "cast": [self.celebrity.id]
+            "cast": [self.celebrity.id],
         }
-        response = self.client.post(self.movie_list_url, movie_data, format='json')
+        response = self.client.post(self.movie_list_url, movie_data, format="json")
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
 
     def test_movie_create_without_director(self):
@@ -155,9 +157,9 @@ class TestMovieCreateView(TestCase):
             "runtime": 120,
             "userRating": 7.5,
             "votes": 1000,
-            "cast": [self.celebrity.id]
+            "cast": [self.celebrity.id],
         }
-        response = self.client.post(self.movie_list_url, movie_data, format='json')
+        response = self.client.post(self.movie_list_url, movie_data, format="json")
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
 
     def test_movie_create_with_invalid_url(self):
@@ -171,23 +173,25 @@ class TestMovieCreateView(TestCase):
             "genres": [self.genre.id],
             "directors": [self.celebrity.id],
             "cast": [self.celebrity.id],
-            "poster": "invalid_url"
+            "poster": "invalid_url",
         }
-        response = self.client.post(self.movie_list_url, movie_data, format='json')
+        response = self.client.post(self.movie_list_url, movie_data, format="json")
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
 
 
 class TestMovieFiltering(TestCase):
     def setUp(self):
         self.client = APIClient()
-        self.login_url = reverse('login')
-        self.movie_list_url = reverse('movie_list')
+        self.login_url = reverse("login")
+        self.movie_list_url = reverse("movie_list")
         self.user = TomatoeUser.objects.create_user(
-            username="testuser@test.com",
-            password="Testpassword1",
-            is_staff=True
+            username="testuser@test.com", password="Testpassword1", is_staff=True
         )
-        self.client.post(self.login_url, {'email': 'testuser@test.com', 'password': 'Testpassword1'}, format='json')
+        self.client.post(
+            self.login_url,
+            {"email": "testuser@test.com", "password": "Testpassword1"},
+            format="json",
+        )
         self.genre = Genre.objects.create(name="Action")
         self.celebrity = Celebrity.objects.create(name="Test Celebrity")
         self.rating = Rating.objects.create(name="PG-13")
@@ -204,41 +208,51 @@ class TestMovieFiltering(TestCase):
         self.movie.cast.add(self.celebrity)
 
     def test_movie_filtering(self):
-        response = self.client.get(self.movie_list_url, {'title': 'Test Movie'}, format='json')
+        response = self.client.get(
+            self.movie_list_url, {"title": "Test Movie"}, format="json"
+        )
         data = response.data["results"]
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(len(data), 1)
-        self.assertEqual(data[0]['title'], 'Test Movie')
+        self.assertEqual(data[0]["title"], "Test Movie")
 
-        response = self.client.get(self.movie_list_url, {'genre': 'Action'}, format='json')
+        response = self.client.get(
+            self.movie_list_url, {"genre": "Action"}, format="json"
+        )
         data = response.data["results"]
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(len(data), 1)
-        self.assertEqual(data[0]['genres'][0], 'Action')
+        self.assertEqual(data[0]["genres"][0], "Action")
 
-        response = self.client.get(self.movie_list_url, {'director': 'Test Celebrity'}, format='json')
+        response = self.client.get(
+            self.movie_list_url, {"director": "Test Celebrity"}, format="json"
+        )
         data = response.data["results"]
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(len(data), 1)
-        self.assertEqual(data[0]['directors'][0], 'Test Celebrity')
+        self.assertEqual(data[0]["directors"][0], "Test Celebrity")
 
-        response = self.client.get(self.movie_list_url, {'rating': 'PG-13'}, format='json')
+        response = self.client.get(
+            self.movie_list_url, {"rating": "PG-13"}, format="json"
+        )
         data = response.data["results"]
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(len(data), 1)
-        self.assertEqual(data[0]['rating'], 'PG-13')
+        self.assertEqual(data[0]["rating"], "PG-13")
 
 
 class TestMovieUpdateView(TestCase):
     def setUp(self):
         self.client = APIClient()
-        self.login_url = reverse('login')
+        self.login_url = reverse("login")
         self.user = TomatoeUser.objects.create_user(
-            username="testuser@test.com",
-            password="Testpassword1",
-            is_staff=True
+            username="testuser@test.com", password="Testpassword1", is_staff=True
         )
-        self.client.post(self.login_url, {'email': 'testuser@test.com', 'password': 'Testpassword1'}, format='json')
+        self.client.post(
+            self.login_url,
+            {"email": "testuser@test.com", "password": "Testpassword1"},
+            format="json",
+        )
         self.genre = Genre.objects.create(name="Action")
         self.celebrity = Celebrity.objects.create(name="Test Celebrity")
         self.rating = Rating.objects.create(name="PG-13")
@@ -253,7 +267,9 @@ class TestMovieUpdateView(TestCase):
         self.movie.genres.add(self.genre)
         self.movie.directors.add(self.celebrity)
         self.movie.cast.add(self.celebrity)
-        self.movie_detail_url = reverse('movie_detail', kwargs={'movie_pk': self.movie.id})
+        self.movie_detail_url = reverse(
+            "movie_detail", kwargs={"movie_pk": self.movie.id}
+        )
 
     def test_movie_update_with_staff_user(self):
         movie_data = {
@@ -265,8 +281,8 @@ class TestMovieUpdateView(TestCase):
             "votes": 2000,
             "genres": [self.genre.id],
             "directors": [self.celebrity.id],
-            "cast": [self.celebrity.id]
+            "cast": [self.celebrity.id],
         }
-        response = self.client.put(self.movie_detail_url, movie_data, format='json')
+        response = self.client.put(self.movie_detail_url, movie_data, format="json")
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(response.data['title'], 'Updated Movie')
+        self.assertEqual(response.data["title"], "Updated Movie")
