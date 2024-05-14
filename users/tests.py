@@ -24,10 +24,11 @@ class TestUserModel(TestCase):
 class TestUserSerializer(TestCase):
     def setUp(self):
         self.user_data = {
+            "username": "terminator",
             "name": "Test User",
             "tel": "123456789",
             "email": "testuser@test.com",
-            "password": "Testpassword1",
+            "password": "Testpassword1"
         }
         self.inputs = ["Hol12ascs", "vadsvadsad", "Hol12"]
         self.expects_error = [False, True, True]
@@ -74,6 +75,7 @@ class TestRegisterView(TestCase):
         self.client = APIClient()
         self.register_url = reverse("register")
         self.user_data = {
+            "username": "terminator",
             "name": "Test User",
             "tel": "123456789",
             "email": "testuser@test.com",
@@ -88,6 +90,11 @@ class TestRegisterView(TestCase):
     def test_register_user_duplicate(self):
         response = self.client.post(self.register_url, self.user_data, format="json")
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        # If username already exists
+        response = self.client.post(self.register_url, self.user_data, format="json")
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        # If email already exists
+        self.user_data['username'] = 'NotDuplicated'
         response = self.client.post(self.register_url, self.user_data, format="json")
         self.assertEqual(response.status_code, status.HTTP_409_CONFLICT)
 

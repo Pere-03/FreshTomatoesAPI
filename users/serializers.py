@@ -1,6 +1,7 @@
 import re
 from rest_framework import serializers, exceptions
 from django.contrib.auth import authenticate
+from django.db.utils import IntegrityError
 from users import models
 
 
@@ -22,8 +23,11 @@ class UserSerializer(serializers.ModelSerializer):
             return value
 
     def create(self, validated_data):
+        if models.TomatoeUser.objects.filter(email=validated_data.get('email')).exists():
+            raise IntegrityError('Email already registered for another user')
+
         return models.TomatoeUser.objects.create_user(
-            username=validated_data["email"], **validated_data
+            **validated_data
         )
 
     def update(self, instance, validated_data):
