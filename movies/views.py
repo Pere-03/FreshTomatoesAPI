@@ -135,12 +135,12 @@ def get_movie_data(movie):
 
 
 def revert_movie(data):
-    if 'directors' in data and not isinstance(data['directors'][0], list):
+    if 'directors' in data and not isinstance(data['directors'][0], int):
         data['directors'] = [director['id'] for director in data['directors']]
     if 'rating' in data and not isinstance(data['rating'], int):
         data['rating'] = data['rating']['id']
-    if 'cast' in data and not isinstance(data['cast'][0], list):
+    if 'cast' in data and not isinstance(data['cast'][0], int):
         data['cast'] = [actor['id'] for actor in data['cast']]
-    if 'genres' in data and not isinstance(data['genres'][0], list):
+    if 'genres' in data and not isinstance(data['genres'][0], int):
         data['genres'] = [genre['id'] for genre in data['genres']]
     return data
