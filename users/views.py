@@ -20,6 +20,7 @@ class LoginView(generics.CreateAPIView):
     serializer_class = serializers.LoginSerializer
 
     def post(self, request):
+        print(request.data)
         serializer = self.get_serializer(data=request.data)
         if serializer.is_valid():
             response = Response(status=status.HTTP_201_CREATED)
@@ -33,7 +34,7 @@ class LoginView(generics.CreateAPIView):
             )
             return response
         else:
-            return Response(status=status.HTTP_401_UNAUTHORIZED)
+            return Response(serializer.errors, status=status.HTTP_401_UNAUTHORIZED)
 
 
 class UserView(generics.RetrieveUpdateDestroyAPIView):
