@@ -60,6 +60,19 @@ class MovieListView(generics.ListCreateAPIView):
                     rating__name__icontains=query_params["rating"]
                 )
 
+            if "year" in query_params:
+                queryset = queryset.filter(
+                    year=query_params['year']
+                )
+            else:
+                if "start" in query_params:
+                    queryset = queryset.filter(
+                        year__gte=query_params["start"]
+                    )
+                if "end" in query_params:
+                    queryset = queryset.filter(
+                        year__lte=query_params["end"]
+                    )
         except (ValueError, TypeError):
             raise ValidationError(
                 "Los parámetros de consulta deben ser del tipo correcto."
