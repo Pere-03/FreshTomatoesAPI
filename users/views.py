@@ -5,6 +5,7 @@ from django.db.utils import IntegrityError
 from django.core.exceptions import ObjectDoesNotExist
 from users import serializers
 from drf_spectacular.utils import extend_schema, OpenApiResponse
+import json
 
 
 class RegisterView(generics.CreateAPIView):
@@ -20,16 +21,20 @@ class LoginView(generics.CreateAPIView):
     serializer_class = serializers.LoginSerializer
 
     def post(self, request):
-        serializer = self.get_serializer(data=request.data)
+        data = request.body
+        if isinstance(data, bytes):
+            data = json.loads(data.decode('utf-8'))
+        serializer = self.get_serializer(data=data)
         if serializer.is_valid():
-            response = Response(status=status.HTTP_201_CREATED)
             token, _ = Token.objects.get_or_create(user=serializer.validated_data)
+            response = Response(status=status.HTTP_201_CREATED)
+
             response.set_cookie(
                 key="session",
                 value=token.key,
                 secure=True,
                 httponly=True,
-                samesite="lax",
+                samesite="None",
             )
             return response
         else:
