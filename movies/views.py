@@ -143,7 +143,7 @@ def get_user(request):
 
 def get_movie_data(movie):
     return {
-        "id": movie.id,
+        "id": str(movie.id),
         "title": movie.title,
         "year": movie.year,
         "runtime": movie.runtime if movie.runtime is not None else "--",
