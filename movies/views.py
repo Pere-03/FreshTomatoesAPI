@@ -4,6 +4,7 @@ from rest_framework.authtoken.models import Token
 
 from rest_framework.exceptions import ValidationError
 from django.core.exceptions import ObjectDoesNotExist
+from django.db.models import Case, When, Value, IntegerField
 
 from .models import Movie
 from . import serializers
@@ -12,8 +13,7 @@ from . import serializers
 class MovieListView(generics.ListCreateAPIView):
     queryset = Movie.objects.all()
     serializer_class = serializers.MovieSerializer
-    filter_backends = [filters.OrderingFilter, filters.SearchFilter]
-    search_fields = ["title", "cast__name", "directors__name"]
+    filter_backends = [filters.OrderingFilter]
     ordering_fields = ["year", "userRating", "runtime", "votes"]
     ordering = ["id"]
 
@@ -32,14 +32,46 @@ class MovieListView(generics.ListCreateAPIView):
         queryset = self.filter_queryset(self.get_queryset())
         page = self.paginate_queryset(queryset)
         if page is not None:
-            data = [get_movie_data(movie) for movie in page]
+            data = [get_movie_info(movie) for movie in page]
             return self.get_paginated_response(data)
-        data = [get_movie_data(movie) for movie in queryset]
+        data = [get_movie_info(movie) for movie in queryset]
         return Response(data)
 
     def filter_queryset(self, queryset):
         query_params = self.request.query_params
         try:
+            if "search" in query_params:
+                search_term = query_params["search"]
+                queryset_title_ids = list(queryset.filter(title__icontains=search_term).values_list('id', flat=True))
+                queryset_cast_ids = list(queryset.filter(cast__name__icontains=search_term).values_list('id', flat=True))
+                queryset_directors_ids = list(queryset.filter(directors__name__icontains=search_term).values_list('id', flat=True))
+                
+                # The queryset is ordered by relevance in 'title', 'cast', and 'directors'.
+                ids_ordered = (
+                    queryset_title_ids +
+                    [id for id in queryset_cast_ids if id not in queryset_title_ids] +
+                    [id for id in queryset_directors_ids if id not in queryset_title_ids and id not in queryset_cast_ids]
+                )
+                ordering = Case(*[When(pk=pk, then=pos) for pos, pk in enumerate(ids_ordered)])
+                queryset = queryset.filter(id__in=ids_ordered).order_by(ordering)
+
+                # Avoid django from default ordering.
+                self.ordering = None
+            else:
+                # If 'search' is not present, the queryset is ordered by 'id'.
+                self.ordering = ["id"]
+
+            if "title" in query_params:
+                queryset = queryset.filter(title__icontains=query_params["title"])
+
+            if "cast" in query_params:
+                queryset = queryset.filter(cast__name__icontains=query_params["cast"])
+
+            if "director" in query_params:
+                queryset = queryset.filter(
+                    directors__name__icontains=query_params["director"]
+                )
+
             if "genres" in query_params:
                 queryset = queryset.filter(
                     genres__name__icontains=query_params["genres"]
@@ -65,7 +97,7 @@ class MovieListView(generics.ListCreateAPIView):
                     )
         except (ValueError, TypeError):
             raise ValidationError(
-                "Los parámetros de consulta deben ser del tipo correcto."
+                "The query parameters must be of the correct type."
             )
         return super().filter_queryset(queryset)
 
@@ -129,6 +161,18 @@ def get_user(request):
             {"detail": "User must be logged in to manage movies."},
             status=status.HTTP_401_UNAUTHORIZED,
         )
+    
+
+def get_movie_info(movie):
+    return {
+        "id": str(movie.id),
+        "title": movie.title,
+        "year": movie.year,
+        "runtime": movie.runtime if movie.runtime is not None else "--",
+        "userRating": movie.userRating,
+        "votes": movie.votes,
+        "poster": movie.poster,
+    }
 
 
 def get_movie_data(movie):

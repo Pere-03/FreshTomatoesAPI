@@ -232,7 +232,9 @@ class TestMovieFiltering(TestCase):
         data = response.data["results"]
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(len(data), 1)
-        self.assertEqual(data[0]["genres"][0]["genre"], "Action")
+        movie = Movie.objects.get(id=data[0]["id"])
+        genres = [genre.name for genre in movie.genres.all()]
+        self.assertIn("Action", genres)
 
         response = self.client.get(
             self.movie_list_url, {"search": "Test Celebrity"}, format="json"
@@ -240,7 +242,9 @@ class TestMovieFiltering(TestCase):
         data = response.data["results"]
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(len(data), 1)
-        self.assertEqual(data[0]["directors"][0]["name"], "Test Celebrity")
+        movie = Movie.objects.get(id=data[0]["id"])
+        directors = [director.name for director in movie.directors.all()]
+        self.assertIn("Test Celebrity", directors)
 
         response = self.client.get(
             self.movie_list_url, {"rating": "PG-13"}, format="json"
@@ -248,7 +252,9 @@ class TestMovieFiltering(TestCase):
         data = response.data["results"]
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(len(data), 1)
-        self.assertEqual(data[0]["rating"]["rating"], "PG-13")
+        movie = Movie.objects.get(id=data[0]["id"])
+        rating = movie.rating.name
+        self.assertEqual(rating, "PG-13")
 
     def test_movie_ordering(self):
         self.movie3 = Movie.objects.create(
