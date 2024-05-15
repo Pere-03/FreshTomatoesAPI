@@ -12,7 +12,8 @@ from . import serializers
 class MovieListView(generics.ListCreateAPIView):
     queryset = Movie.objects.all()
     serializer_class = serializers.MovieSerializer
-    filter_backends = [filters.OrderingFilter]
+    filter_backends = [filters.OrderingFilter, filters.SearchFilter]
+    search_fields = ["title", "cast__name", "directors__name"]
     ordering_fields = ["year", "userRating", "runtime", "votes"]
     ordering = ["id"]
 
@@ -39,20 +40,9 @@ class MovieListView(generics.ListCreateAPIView):
     def filter_queryset(self, queryset):
         query_params = self.request.query_params
         try:
-            if "title" in query_params:
-                queryset = queryset.filter(title__icontains=query_params["title"])
-
-            if "genre" in query_params:
+            if "genres" in query_params:
                 queryset = queryset.filter(
-                    genres__name__icontains=query_params["genre"]
-                )
-
-            if "cast" in query_params:
-                queryset = queryset.filter(cast__name__icontains=query_params["cast"])
-
-            if "director" in query_params:
-                queryset = queryset.filter(
-                    directors__name__icontains=query_params["director"]
+                    genres__name__icontains=query_params["genres"]
                 )
 
             if "rating" in query_params:

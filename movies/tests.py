@@ -190,7 +190,7 @@ class TestMovieFiltering(TestCase):
             {"username": "testuser@test.com", "password": "Testpassword1"},
             format="json",
         )
-        self.genre = Genre.objects.create(name="Action")
+        self.genre = Genre.objects.create(name="Romance")
         self.celebrity = Celebrity.objects.create(name="Test Celebrity")
         self.rating = Rating.objects.create(name="PG-13")
         self.movie = Movie.objects.create(
@@ -205,9 +205,21 @@ class TestMovieFiltering(TestCase):
         self.movie.directors.add(self.celebrity)
         self.movie.cast.add(self.celebrity)
 
+        self.genre2 = Genre.objects.create(name="Action")
+        self.rating2 = Rating.objects.create(name="R")
+        self.movie2 = Movie.objects.create(
+            title="Bad movie",
+            year=2021,
+            rating=self.rating2,
+            runtime=130,
+            userRating=8.0,
+            votes=2000,
+        )
+        self.movie2.genres.add(self.genre2)
+
     def test_movie_filtering(self):
         response = self.client.get(
-            self.movie_list_url, {"title": "Test Movie"}, format="json"
+            self.movie_list_url, {"search": "Test Movie"}, format="json"
         )
         data = response.data["results"]
         self.assertEqual(response.status_code, status.HTTP_200_OK)
@@ -215,7 +227,7 @@ class TestMovieFiltering(TestCase):
         self.assertEqual(data[0]["title"], "Test Movie")
 
         response = self.client.get(
-            self.movie_list_url, {"genre": "Action"}, format="json"
+            self.movie_list_url, {"genres": "Action"}, format="json"
         )
         data = response.data["results"]
         self.assertEqual(response.status_code, status.HTTP_200_OK)
@@ -223,7 +235,7 @@ class TestMovieFiltering(TestCase):
         self.assertEqual(data[0]["genres"][0]["genre"], "Action")
 
         response = self.client.get(
-            self.movie_list_url, {"director": "Test Celebrity"}, format="json"
+            self.movie_list_url, {"search": "Test Celebrity"}, format="json"
         )
         data = response.data["results"]
         self.assertEqual(response.status_code, status.HTTP_200_OK)
@@ -239,14 +251,6 @@ class TestMovieFiltering(TestCase):
         self.assertEqual(data[0]["rating"]["rating"], "PG-13")
 
     def test_movie_ordering(self):
-        self.movie2 = Movie.objects.create(
-            title="Test Movie 2",
-            year=2021,
-            rating=self.rating,
-            runtime=130,
-            userRating=8.0,
-            votes=2000,
-        )
         self.movie3 = Movie.objects.create(
             title="Test Movie 3",
             year=2019,

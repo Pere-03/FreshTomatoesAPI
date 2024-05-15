@@ -5,7 +5,6 @@ from django.db.utils import IntegrityError
 from django.core.exceptions import ObjectDoesNotExist
 from users import serializers
 from drf_spectacular.utils import extend_schema, OpenApiResponse
-import json
 
 
 class RegisterView(generics.CreateAPIView):
