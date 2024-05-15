@@ -21,10 +21,7 @@ class LoginView(generics.CreateAPIView):
     serializer_class = serializers.LoginSerializer
 
     def post(self, request):
-        data = request.body
-        if isinstance(data, bytes):
-            data = json.loads(data.decode('utf-8'))
-        serializer = self.get_serializer(data=data)
+        serializer = self.get_serializer(data=request.data)
         if serializer.is_valid():
             token, _ = Token.objects.get_or_create(user=serializer.validated_data)
             response = Response(status=status.HTTP_201_CREATED)
