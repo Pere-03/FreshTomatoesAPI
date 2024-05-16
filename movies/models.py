@@ -32,10 +32,10 @@ class Movie(models.Model):
     rating = models.ForeignKey(
         Rating, related_name="movie_rating", on_delete=models.SET_NULL, null=True
     )
-    genres = models.ManyToManyField("Genre", related_name="movie_genres", blank=True)
+    genres = models.ManyToManyField(Genre, related_name="movie_genres", blank=True)
     runtime = models.IntegerField(null=True)
-    directors = models.ManyToManyField("Celebrity", related_name="movie_directors")
-    cast = models.ManyToManyField("Celebrity", related_name="movie_cast", blank=True)
+    directors = models.ManyToManyField(Celebrity, related_name="movie_directors")
+    cast = models.ManyToManyField(Celebrity, related_name="movie_cast", blank=True)
     poster = models.URLField(null=True)
     userRating = models.DecimalField(
         default=0,
