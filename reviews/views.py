@@ -3,6 +3,7 @@ from rest_framework.response import Response
 from rest_framework.authtoken.models import Token
 
 from django.core.exceptions import ObjectDoesNotExist
+from drf_spectacular.utils import extend_schema, OpenApiResponse
 
 from .models import Review
 from users.models import TomatoeUser
@@ -10,6 +11,22 @@ from movies.models import Movie
 from .serializers import ReviewSerializer
 
 
+@extend_schema(
+    methods=['GET'],
+    description="Retrieve a list of all reviews",
+    responses={
+        200: OpenApiResponse(description="List of reviews retrieved successfully"),
+    },
+)
+@extend_schema(
+    methods=['POST'],
+    description="Create a new review",
+    responses={
+        201: OpenApiResponse(description="New review created successfully"),
+        400: OpenApiResponse(description="Invalid data"),
+        401: OpenApiResponse(description="User must be logged in to manage reviews"),
+    },
+)
 class ReviewListView(generics.ListCreateAPIView):
     queryset = Review.objects.all()
     serializer_class = ReviewSerializer
@@ -91,6 +108,33 @@ class ReviewListView(generics.ListCreateAPIView):
         return
 
 
+@extend_schema(
+    methods=['GET'],
+    description="Retrieve a specific review",
+    responses={
+        200: OpenApiResponse(description="Review information retrieved successfully"),
+        401: OpenApiResponse(description="User must be logged in to manage reviews"),
+    },
+)
+@extend_schema(
+    methods=['PUT', 'PATCH'],
+    description="Update a specific review",
+    responses={
+        200: OpenApiResponse(description="Review information updated successfully"),
+        400: OpenApiResponse(description="Invalid data"),
+        401: OpenApiResponse(description="User must be logged in to manage reviews"),
+        403: OpenApiResponse(description="User can only edit their own reviews"),
+    },
+)
+@extend_schema(
+    methods=['DELETE'],
+    description="Delete a specific review",
+    responses={
+        204: OpenApiResponse(description="Review deleted successfully"),
+        401: OpenApiResponse(description="User must be logged in to manage reviews"),
+        403: OpenApiResponse(description="User can only delete their own reviews"),
+    },
+)
 class ReviewDetailView(generics.RetrieveUpdateDestroyAPIView):
     queryset = Review.objects.all()
     serializer_class = ReviewSerializer

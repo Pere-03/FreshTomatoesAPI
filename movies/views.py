@@ -4,12 +4,30 @@ from rest_framework.authtoken.models import Token
 
 from rest_framework.exceptions import ValidationError
 from django.core.exceptions import ObjectDoesNotExist
-from django.db.models import Case, When, Value, IntegerField
+from django.db.models import Case, When
 
+from drf_spectacular.utils import extend_schema, OpenApiResponse
 from .models import Movie
 from . import serializers
 
 
+@extend_schema(
+    methods=["GET"],
+    description="Retrieve a list of all movies",
+    responses={
+        200: OpenApiResponse(description="List of movies retrieved successfully"),
+    },
+)
+@extend_schema(
+    methods=["POST"],
+    description="Create a new movie",
+    responses={
+        201: OpenApiResponse(description="New movie created successfully"),
+        400: OpenApiResponse(description="Invalid data"),
+        401: OpenApiResponse(description="User must be logged in to manage movies"),
+        403: OpenApiResponse(description="Higher role needed to manage movies"),
+    },
+)
 class MovieListView(generics.ListCreateAPIView):
     queryset = Movie.objects.all()
     serializer_class = serializers.MovieSerializer
@@ -42,17 +60,35 @@ class MovieListView(generics.ListCreateAPIView):
         try:
             if "search" in query_params:
                 search_term = query_params["search"]
-                queryset_title_ids = list(queryset.filter(title__icontains=search_term).values_list('id', flat=True))
-                queryset_cast_ids = list(queryset.filter(cast__name__icontains=search_term).values_list('id', flat=True))
-                queryset_directors_ids = list(queryset.filter(directors__name__icontains=search_term).values_list('id', flat=True))
-                
+                queryset_title_ids = list(
+                    queryset.filter(title__icontains=search_term).values_list(
+                        "id", flat=True
+                    )
+                )
+                queryset_cast_ids = list(
+                    queryset.filter(cast__name__icontains=search_term).values_list(
+                        "id", flat=True
+                    )
+                )
+                queryset_directors_ids = list(
+                    queryset.filter(directors__name__icontains=search_term).values_list(
+                        "id", flat=True
+                    )
+                )
+
                 # The queryset is ordered by relevance in 'title', 'cast', and 'directors'.
                 ids_ordered = (
-                    queryset_title_ids +
-                    [id for id in queryset_cast_ids if id not in queryset_title_ids] +
-                    [id for id in queryset_directors_ids if id not in queryset_title_ids and id not in queryset_cast_ids]
+                    queryset_title_ids
+                    + [id for id in queryset_cast_ids if id not in queryset_title_ids]
+                    + [
+                        id
+                        for id in queryset_directors_ids
+                        if id not in queryset_title_ids and id not in queryset_cast_ids
+                    ]
                 )
-                ordering = Case(*[When(pk=pk, then=pos) for pos, pk in enumerate(ids_ordered)])
+                ordering = Case(
+                    *[When(pk=pk, then=pos) for pos, pk in enumerate(ids_ordered)]
+                )
                 queryset = queryset.filter(id__in=ids_ordered).order_by(ordering)
 
                 # Avoid django from default ordering.
@@ -83,25 +119,44 @@ class MovieListView(generics.ListCreateAPIView):
                 )
 
             if "year" in query_params:
-                queryset = queryset.filter(
-                    year=query_params['year']
-                )
+                queryset = queryset.filter(year=query_params["year"])
             else:
                 if "start" in query_params:
-                    queryset = queryset.filter(
-                        year__gte=query_params["start"]
-                    )
+                    queryset = queryset.filter(year__gte=query_params["start"])
                 if "end" in query_params:
-                    queryset = queryset.filter(
-                        year__lte=query_params["end"]
-                    )
+                    queryset = queryset.filter(year__lte=query_params["end"])
         except (ValueError, TypeError):
-            raise ValidationError(
-                "The query parameters must be of the correct type."
-            )
+            raise ValidationError("The query parameters must be of the correct type.")
         return super().filter_queryset(queryset)
 
 
+@extend_schema(
+    methods=["GET"],
+    description="Retrieve information of a specific movie",
+    responses={
+        200: OpenApiResponse(description="Movie information retrieved successfully"),
+        401: OpenApiResponse(description="User must be logged in to manage movies"),
+    },
+)
+@extend_schema(
+    methods=["PUT", "PATCH"],
+    description="Update information of a specific movie",
+    responses={
+        200: OpenApiResponse(description="Movie information updated successfully"),
+        400: OpenApiResponse(description="Invalid data"),
+        401: OpenApiResponse(description="User must be logged in to manage movies"),
+        403: OpenApiResponse(description="Higher role needed to manage movies"),
+    },
+)
+@extend_schema(
+    methods=["DELETE"],
+    description="Delete a specific movie",
+    responses={
+        204: OpenApiResponse(description="Movie deleted successfully"),
+        401: OpenApiResponse(description="User must be logged in to manage movies"),
+        403: OpenApiResponse(description="Higher role needed to manage movies"),
+    },
+)
 class MovieDetailView(generics.RetrieveUpdateDestroyAPIView):
     queryset = Movie.objects.all()
     serializer_class = serializers.MovieSerializer
@@ -161,7 +216,7 @@ def get_user(request):
             {"detail": "User must be logged in to manage movies."},
             status=status.HTTP_401_UNAUTHORIZED,
         )
-    
+
 
 def get_movie_info(movie):
     return {

@@ -7,6 +7,13 @@ from users import serializers
 from drf_spectacular.utils import extend_schema, OpenApiResponse
 
 
+@extend_schema(
+    description="User registration endpoint",
+    responses={
+        201: OpenApiResponse(description="User registered successfully"),
+        409: OpenApiResponse(description="Email already registered for another user"),
+    },
+)
 class RegisterView(generics.CreateAPIView):
     serializer_class = serializers.UserSerializer
 
@@ -16,6 +23,13 @@ class RegisterView(generics.CreateAPIView):
         return super().handle_exception(exc)
 
 
+@extend_schema(
+    description="User login endpoint",
+    responses={
+        201: OpenApiResponse(description="User logged in successfully"),
+        401: OpenApiResponse(description="Invalid credentials"),
+    },
+)
 class LoginView(generics.CreateAPIView):
     serializer_class = serializers.LoginSerializer
 
@@ -37,6 +51,13 @@ class LoginView(generics.CreateAPIView):
             return Response(serializer.errors, status=status.HTTP_401_UNAUTHORIZED)
 
 
+@extend_schema(
+    description="User information endpoint",
+    responses={
+        200: OpenApiResponse(description="User information retrieved successfully"),
+        401: OpenApiResponse(description="No user logged"),
+    },
+)
 class UserView(generics.RetrieveUpdateDestroyAPIView):
     serializer_class = serializers.UserSerializer
 

@@ -324,6 +324,8 @@ class TestReviewDetailView(TestCase):
             format="json",
         )
         response = self.client.patch(
-            self.review_detail_url, {"movie": self.bad_review_data["movie"]}, format="json"
+            self.review_detail_url,
+            {"movie": self.bad_review_data["movie"]},
+            format="json",
         )
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
